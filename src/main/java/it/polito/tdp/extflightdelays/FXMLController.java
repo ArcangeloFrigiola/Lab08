@@ -5,8 +5,11 @@
 package it.polito.tdp.extflightdelays;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.extflightdelays.model.Adiacenze;
 import it.polito.tdp.extflightdelays.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -35,7 +38,26 @@ public class FXMLController {
 
     @FXML
     void doAnalizzaAeroporti(ActionEvent event) {
-    	//TODO
+    	this.txtResult.clear();
+    	int distanzaMin = 0;
+    	try {
+    	    distanzaMin = Integer.parseInt(this.distanzaMinima.getText());
+    	}catch(NumberFormatException e) {
+    		this.txtResult.appendText("Inserire solo valori numerici!");
+    		return;
+    	}
+    	
+    	List<Adiacenze> result = new ArrayList<>(this.model.genereateGraph(distanzaMin));
+    	if(this.model.nVertex()==0 || this.model.nEdges()==0){
+    		this.txtResult.appendText("Nessun grafo trovato con distanza minima "+distanzaMin);
+    		return;
+    	}
+    	this.txtResult.appendText(String.format("Grafo creato!\n#Vertici: %d\n#Archi: %d", this.model.nVertex(), this.model.nEdges()));
+    	
+    	this.txtResult.appendText("\nArchi del grafo:\n");
+    	for(Adiacenze a: result) {
+    		this.txtResult.appendText(a.getAirport1().getAirportName()+" - "+a.getAirport2().getAirportName()+" "+a.getDistanceBetween()+"\n");
+    	}
     }
 
     @FXML // This method is called by the FXMLLoader when initialization is complete

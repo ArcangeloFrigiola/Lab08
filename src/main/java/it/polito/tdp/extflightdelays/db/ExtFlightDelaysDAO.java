@@ -7,7 +7,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
+import it.polito.tdp.extflightdelays.model.Adiacenze;
 import it.polito.tdp.extflightdelays.model.Airline;
 import it.polito.tdp.extflightdelays.model.Airport;
 import it.polito.tdp.extflightdelays.model.Flight;
@@ -37,9 +39,10 @@ public class ExtFlightDelaysDAO {
 		}
 	}
 
-	public List<Airport> loadAllAirports() {
+	public void loadAllAirports(Map<Integer, Airport> idMap) {
 		String sql = "SELECT * FROM airports";
-		List<Airport> result = new ArrayList<Airport>();
+		
+		List<Flight> listaVoli = new ArrayList<>(loadAllFlights());
 
 		try {
 			Connection conn = ConnectDB.getConnection();
@@ -50,11 +53,22 @@ public class ExtFlightDelaysDAO {
 				Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
 						rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
 						rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
-				result.add(airport);
+				
+				boolean trovato = false;
+				for(Flight f: listaVoli) {
+					if((f.getDestinationAirportId()==rs.getInt("ID")) || (f.getOriginAirportId()==rs.getInt("ID"))) {
+						trovato = true;
+					}
+				}
+				
+				if(trovato) {
+					idMap.put(rs.getInt("ID"), airport);
+				}
+				
 			}
 
 			conn.close();
-			return result;
+			return;
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -91,4 +105,33 @@ public class ExtFlightDelaysDAO {
 			throw new RuntimeException("Error Connection Database");
 		}
 	}
+	
+	public List<Adiacenze> getEdges(Map<Integer, Airport> mapAeroporti) {
+		String sql = "SELECT fl.ORIGIN_AIRPORT_ID AS oA, fl.DESTINATION_AIRPORT_ID AS oD, AVG(fl.DISTANCE) AS distance\r\n" + 
+				     "FROM flights AS fl\r\n" + 
+				     "GROUP BY fl.ORIGIN_AIRPORT_ID, fl.DESTINATION_AIRPORT_ID";
+		
+		List<Adiacenze> temp = new ArrayList<>();
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				Adiacenze adiacenza = new Adiacenze(mapAeroporti.get(rs.getInt("oA")), mapAeroporti.get(rs.getInt("oD")), rs.getInt("distance"));
+				temp.add(adiacenza);
+			}
+			
+			conn.close();
+			return temp;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+
+
 }
